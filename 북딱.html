@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건영허브 | GEONYEONG HUB Secure Store</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #030305; color: #f3f4f6; margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; }
+        header { background: rgba(10, 10, 18, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); }
+        .logo-box { display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .logo-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: white; box-shadow: 0 10px 25px rgba(99,102,241,0.4); }
+        .btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; padding: 10px 18px; border-radius: 12px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
+        .btn-success:hover { opacity: 0.9; }
+        main { max-width: 1200px; width: 100%; margin: 0 auto; padding: 40px 20px; flex-grow: 1; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 25px; }
+        .card { background: rgba(13, 13, 22, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        .tag { display: inline-block; background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid rgba(99,102,241,0.3); }
+        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(12px); }
+        .hidden { display: none !important; }
+        .modal-content { background: #0c0c16; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 28px; width: 100%; max-width: 520px; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.9); }
+        input, textarea { width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; color: white; font-size: 14px; margin-top: 8px; margin-bottom: 16px; outline: none; }
+        input:focus, textarea:focus { border-color: #6366f1; }
+        #toast { position: fixed; top: 20px; right: 20px; background: #065f46; color: #6ee7b7; padding: 14px 24px; border-radius: 14px; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1000; transition: 0.3s; transform: translateY(-100px); opacity: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="toast">처리되었습니다.</div>
+
+    <!-- 멀티탭 중복 차단 레이어 -->
+    <div id="duplicate-tab-overlay" class="modal hidden" style="background: rgba(0,0,0,0.98);">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: #f43f5e; margin-bottom: 10px;">중복 접속 차단됨</h2>
+            <p style="color: #94a3b8; font-size: 14px; margin-bottom: 25px;">다른 탭에서 이미 건영허브가 실행 중입니다.<br>기존 창을 닫고 이용해주세요.</p>
+            <button class="btn" style="background: #f43f5e; color: white; width: 100%;" onclick="location.reload()">새로고침</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-box" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+            <div class="logo-icon">G</div>
+            <div>
+                <div style="font-weight: 900; font-size: 16px; color: white; letter-spacing: -0.5px;">GEONYEONG HUB</div>
+                <div style="font-size: 10px; color: #818cf8; font-weight: bold; letter-spacing: 1px;">SECURE DIRECT STORE</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" onclick="openAdminAuth()" id="admin-btn">관리자 인증</button>
+            <button class="btn" onclick="toggleCart()">장바구니 (<span id="cart-count">0</span>)</button>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 20px;">
+            <div>
+                <h2 style="margin: 0; font-size: 22px; color: white;">스크립트 & 에셋 카탈로그</h2>
+                <p style="margin: 5px 0 0 0; font-size: 12px; color: #94a3b8;">입금 신청 시 관리자가 계좌 입금 확인 후 직접 승인 처리를 진행합니다.</p>
+            </div>
+            <span class="tag" id="product-count">총 0개 빌드</span>
+        </div>
+        <div id="product-grid" class="grid"></div>
+    </main>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: white;">입금 결제 및 수령 신청</h3>
+                <button class="btn" onclick="toggleCart()" style="padding: 5px 10px;">✕</button>
+            </div>
+            <div id="cart-items" style="max-height: 150px; overflow-y: auto; margin-bottom: 20px;"></div>
+            
+            <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-size: 11px; color: #818cf8; font-weight: bold;">지정 입금 계좌 (예금주: 박건영)</span>
+                    <button class="btn" style="padding: 2px 8px; font-size: 11px; color: #34d399;" onclick="copyBankInfo()">계좌복사</button>
+                </div>
+                <div style="font-size: 16px; font-weight: 900; color: white;">토스뱅크 1908-4397-1045</div>
+            </div>
+
+            <label style="font-size: 12px; font-weight: bold; color: #cbd5e1;">입금자 성함</label>
+            <input type="text" id="buyer-name" placeholder="예: 박건영" maxlength="20">
+
+            <label style="font-size: 12px; font-weight: bold; color: #cbd5e1;">디스코드 닉네임</label>
+            <input type="text" id="buyer-contact" placeholder="예: geonyeong_user" maxlength="40">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 20px 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px;">
+                <span style="font-size: 13px; color: #94a3b8;">총 결제 금액</span>
+                <span id="cart-total" style="font-size: 20px; font-weight: 900; color: #34d399;">₩0</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn" style="background: #2563eb; color: white;" onclick="openTossApp()">토스 앱으로 송금하기</button>
+                <button class="btn btn-primary" onclick="completeTransfer()">입금 신청 완료하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Pending Modal -->
+    <div id="pending-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
+            <h3 style="margin: 0 0 10px 0; color: #38bdf8;">입금 확인 대기 중</h3>
+            <p style="font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;">
+                디스코드 채널로 주문 알림이 전달되었습니다.<br>
+                관리자가 입금을 확인하고 <strong style="color:#34d399;">[입금확인]</strong>을 완료하면<br>스크립트 전송 및 수령이 이루어집니다.
+            </p>
+            <button class="btn btn-primary" style="width: 100%;" onclick="closePendingModal()">확인</button>
+        </div>
+    </div>
+
+    <!-- Admin Auth Modal -->
+    <div id="admin-auth-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 360px; text-align: center;">
+            <h3 style="color: white; margin-bottom: 5px;">관리자 인증</h3>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;">보안 비밀번호를 입력하세요.</p>
+            <input type="password" id="admin-pwd-input" placeholder="비밀번호 입력 (0128)" style="text-align: center;" onkeyup="if(event.key==='Enter') submitAdminAuth()">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" style="width: 50%;" onclick="closeAdminAuth()">취소</button>
+                <button class="btn btn-primary" style="width: 50%;" onclick="submitAdminAuth()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="admin-panel-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 650px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: white;">👑 관리자 대시보드 (입금확인 & 상품관리)</h3>
+                <button class="btn" onclick="toggleAdminPanelModal()" style="padding: 5px 10px;">✕</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <button class="btn btn-primary" id="tab-btn-orders" onclick="switchAdminTab('orders')">📥 입금 대기 주문 (<span id="pending-count">0</span>)</button>
+                <button class="btn" id="tab-btn-add" onclick="switchAdminTab('add')">➕ 신규 빌드 등록</button>
+            </div>
+
+            <div id="admin-orders-section">
+                <div id="order-list-container" style="max-height: 350px; overflow-y: auto;"></div>
+            </div>
+
+            <div id="admin-add-section" class="hidden">
+                <form id="product-form" onsubmit="handleProductSubmit(event)">
+                    <label style="font-size: 12px; color: #cbd5e1;">카테고리</label>
+                    <input type="text" id="p-category" placeholder="예: Roblox, Python" required>
+                    
+                    <label style="font-size: 12px; color: #cbd5e1;">상품명</label>
+                    <input type="text" id="p-name" placeholder="상품명" required>
+                    
+                    <label style="font-size: 12px; color: #cbd5e1;">상세 설명</label>
+                    <textarea id="p-desc" rows="2" placeholder="상품 설명" required></textarea>
+                    
+                    <label style="font-size: 12px; color: #cbd5e1;">스크립트 코드 (승인 시 제공될 코드)</label>
+                    <textarea id="p-script" rows="3" placeholder="print('Hello')" required style="color: #38bdf8; font-family: monospace;"></textarea>
+                    
+                    <label style="font-size: 12px; color: #cbd5e1;">가격 (KRW)</label>
+                    <input type="number" id="p-price" placeholder="45000" required>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">등록하기</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        try {
+            const channel = new BroadcastChannel('geonyeong_hub_session');
+            channel.postMessage({ type: 'NEW_TAB_OPENED' });
+            channel.onmessage = function(event) {
+                if (event.data && event.data.type === 'NEW_TAB_OPENED') {
+                    channel.postMessage({ type: 'TAB_ALREADY_ACTIVE' });
+                } else if (event.data && event.data.type === 'TAB_ALREADY_ACTIVE') {
+                    document.getElementById('duplicate-tab-overlay').classList.remove('hidden');
+                }
+            };
+        } catch(e) {}
+
+        let clickTimestamps = [];
+        const MAX_REQUESTS_PER_SECOND = 5;
+        let isRateLimited = false;
+
+        function checkRateLimit() {
+            const now = Date.now();
+            clickTimestamps = clickTimestamps.filter(t => now - t < 1000);
+            if (isRateLimited) return false;
+            if (clickTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
+                isRateLimited = true;
+                showToast("⚠️ 트래픽 과다 요청으로 잠시 제한됩니다.");
+                setTimeout(() => { isRateLimited = false; clickTimestamps = []; }, 3000);
+                return false;
+            }
+            clickTimestamps.push(now);
+            return true;
+        }
+
+        const ADMIN_PASSWORD = "0128";
+        const WEBHOOK_URL = "https://discord.com/api/webhooks/1568847414184644729/zC0JwvO6zrxAv6Q6INJoHVkhb7Ps7M5ZuOhmGd1yaC8sjN-y4_KP--TlLj0c3X99C_o2";
+
+        let isAdmin = false;
+        let adminAuthTime = null;
+        const ADMIN_SESSION_TIMEOUT = 10 * 60 * 1000;
+
+        let defaultProducts = [
+            { id: 1, category: 'Automation', name: 'PyAutoGUI Window Macro Kit', desc: '데스크톱 윈도우 인터랙션 코어 패키지.', script: 'import pyautogui\nprint("GEONYEONG HUB LOADED")', price: 45000 },
+            { id: 2, category: 'UI Framework', name: 'Rayfield Custom UI Suite', desc: '모듈형 사용자 인터페이스 프레임워크 템플릿.', script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/RayfieldUI/source"))()', price: 32000 }
+        ];
+
+        let products = [];
+        let cart = [];
+        let pendingOrders = [];
+
+        try {
+            const savedProducts = localStorage.getItem('geonyeong_products');
+            if (savedProducts) products = JSON.parse(savedProducts);
+            if (!Array.isArray(products) || products.length === 0) {
+                products = defaultProducts;
+                localStorage.setItem('geonyeong_products', JSON.stringify(defaultProducts));
+            }
+
+            const savedCart = localStorage.getItem('geonyeong_cart');
+            if (savedCart) cart = JSON.parse(savedCart);
+            if (!Array.isArray(cart)) cart = [];
+
+            const savedOrders = localStorage.getItem('geonyeong_orders');
+            if (savedOrders) pendingOrders = JSON.parse(savedOrders);
+            if (!Array.isArray(pendingOrders)) pendingOrders = [];
+        } catch (e) {
+            products = defaultProducts;
+            cart = [];
+            pendingOrders = [];
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.innerText = msg;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.transform = 'translateY(-100px)'; toast.style.opacity = '0'; }, 2500);
+        }
+
+        function sanitizeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        function checkAdminSession() {
+            if (isAdmin && adminAuthTime && (Date.now() - adminAuthTime > ADMIN_SESSION_TIMEOUT)) {
+                isAdmin = false;
+                adminAuthTime = null;
+                const adminBtn = document.getElementById('admin-btn');
+                if (adminBtn) adminBtn.innerText = "관리자 인증";
+                showToast("관리자 세션이 만료되었습니다.");
+                renderProducts();
+            }
+        }
+
+        function openAdminAuth() {
+            if (!checkRateLimit()) return;
+            checkAdminSession();
+            if (isAdmin) return toggleAdminPanelModal();
+            document.getElementById('admin-auth-modal').classList.remove('hidden');
+        }
+
+        function closeAdminAuth() {
+            document.getElementById('admin-auth-modal').classList.add('hidden');
+            document.getElementById('admin-pwd-input').value = '';
+        }
+
+        function submitAdminAuth() {
+            if (!checkRateLimit()) return;
+            const pwd = document.getElementById('admin-pwd-input').value;
+            if (pwd === ADMIN_PASSWORD) {
+                isAdmin = true;
+                adminAuthTime = Date.now();
+                document.getElementById('admin-btn').innerText = "관리자 패널";
+                closeAdminAuth();
+                showToast("관리자 인증 성공!");
+                renderProducts();
+                toggleAdminPanelModal();
+            } else {
+                showToast("비밀번호가 일치하지 않습니다.");
+            }
+        }
+
+        function toggleAdminPanelModal() {
+            renderAdminOrders();
+            document.getElementById('admin-panel-modal').classList.toggle('hidden');
+        }
+
+        function switchAdminTab(tab) {
+            if (tab === 'orders') {
+                document.getElementById('admin-orders-section').classList.remove('hidden');
+                document.getElementById('admin-add-section').classList.add('hidden');
+                document.getElementById('tab-btn-orders').classList.add('btn-primary');
+                document.getElementById('tab-btn-add').classList.remove('btn-primary');
+            } else {
+                document.getElementById('admin-orders-section').classList.add('hidden');
+                document.getElementById('admin-add-section').classList.remove('hidden');
+                document.getElementById('tab-btn-add').classList.add('btn-primary');
+                document.getElementById('tab-btn-orders').classList.remove('btn-primary');
+            }
+        }
+
+        function approveOrder(orderId) {
+            if (!checkRateLimit()) return;
+            const order = pendingOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            let scriptsText = order.items.map(i => `[${i.name}]\n${i.script}`).join('\n\n');
+
+            navigator.clipboard.writeText(scriptsText);
+            alert(`✅ 입금 확인 승인 완료!\n\n구매자: ${order.buyerName}\n디스코드 닉네임: ${order.buyerContact}\n\n구매 스크립트 코드가 클립보드에 복사되었습니다.`);
+
+            pendingOrders = pendingOrders.filter(o => o.id !== orderId);
+            try { localStorage.setItem('geonyeong_orders', JSON.stringify(pendingOrders)); } catch(e){}
+            renderAdminOrders();
+            showToast("입금 확인 및 승인이 완료되었습니다.");
+        }
+
+        function renderAdminOrders() {
+            const container = document.getElementById('order-list-container');
+            const countEl = document.getElementById('pending-count');
+            if (!container) return;
+
+            countEl.innerText = pendingOrders.length;
+
+            if (pendingOrders.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center; padding:30px;">대기 중인 입금 신청 내역이 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            pendingOrders.forEach(o => {
+                let itemsList = o.items.map(i => i.name).join(', ');
+                container.innerHTML += `
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:18px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:16px; font-weight:bold; color:white;">👤 ${sanitizeHTML(o.buyerName)} (디스코드 닉네임: ${sanitizeHTML(o.buyerContact)})</span>
+                            <span style="font-size:16px; font-weight:900; color:#34d399;">₩${o.totalAmount.toLocaleString()}</span>
+                        </div>
+                        <div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">📦 주문 상품: ${sanitizeHTML(itemsList)}</div>
+                        <button class="btn btn-success" style="width:100%; padding:8px;" onclick="approveOrder(${o.id})">✅ 입금 확인 (승인 및 스크립트 전송)</button>
+                    </div>`;
+            });
+        }
+
+        function renderProducts() {
+            checkAdminSession();
+            const grid = document.getElementById('product-grid');
+            const countEl = document.getElementById('product-count');
+            if (!grid) return;
+            if (countEl) countEl.innerText = `총 ${products.length}개 빌드`;
+            
+            grid.innerHTML = '';
+            products.forEach(p => {
+                let delBtn = isAdmin ? `<button class="btn" style="color:#f43f5e; padding:4px 8px; font-size:11px;" onclick="deleteProduct(${p.id})">삭제</button>` : '';
+                grid.innerHTML += `
+                    <div class="card">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <span class="tag">${sanitizeHTML(p.category)}</span>
+                                ${delBtn}
+                            </div>
+                            <h3 style="margin:0 0 8px 0; font-size:18px; color:white;">${sanitizeHTML(p.name)}</h3>
+                            <p style="margin:0 0 20px 0; font-size:13px; color:#94a3b8; line-height:1.5;">${sanitizeHTML(p.desc)}</p>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:15px;">
+                            <span style="font-size:20px; font-weight:900; color:white;">₩${Number(p.price).toLocaleString()}</span>
+                            <button class="btn btn-primary" onclick="addToCart(${p.id})">담기</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function toggleCart() { 
+            if (!checkRateLimit()) return;
+            document.getElementById('cart-modal').classList.toggle('hidden'); 
+        }
+
+        function handleProductSubmit(e) {
+            e.preventDefault();
+            if (!checkRateLimit()) return;
+            checkAdminSession();
+            if (!isAdmin) return showToast("권한이 없습니다.");
+
+            const category = sanitizeHTML(document.getElementById('p-category').value.trim());
+            const name = sanitizeHTML(document.getElementById('p-name').value.trim());
+            const desc = sanitizeHTML(document.getElementById('p-desc').value.trim());
+            const script = document.getElementById('p-script').value.trim();
+            const price = parseInt(document.getElementById('p-price').value) || 0;
+
+            if (!category || !name || !script || price <= 0) return showToast("모든 항목을 입력해 주세요.");
+
+            products.push({ id: Date.now(), category, name, desc, script, price });
+            try { localStorage.setItem('geonyeong_products', JSON.stringify(products)); } catch (err) {}
+            renderProducts();
+            document.getElementById('product-form').reset();
+            switchAdminTab('orders');
+            showToast("신규 빌드가 등록되었습니다.");
+        }
+
+        function deleteProduct(id) {
+            if (!checkRateLimit()) return;
+            checkAdminSession();
+            if (!isAdmin) return showToast("권한이 없습니다.");
+            if (confirm("이 빌드를 삭제하시겠습니까?")) {
+                products = products.filter(p => p.id !== id);
+                try { localStorage.setItem('geonyeong_products', JSON.stringify(products)); } catch (err) {}
+                renderProducts();
+                showToast("빌드가 삭제되었습니다.");
+            }
+        }
+
+        function addToCart(id) {
+            if (!checkRateLimit()) return;
+            const p = products.find(item => item.id === id);
+            if (p) {
+                cart.push(p);
+                try { localStorage.setItem('geonyeong_cart', JSON.stringify(cart)); } catch (err) {}
+                updateCartUI();
+                showToast(`"${p.name}" 담기 완료`);
+            }
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            if (!container || !totalEl) return;
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center; padding:20px;">장바구니가 비어 있습니다.</p>';
+                totalEl.innerText = '₩0';
+                return;
+            }
+            let total = 0;
+            container.innerHTML = '';
+            cart.forEach((item) => {
+                total += item.price;
+                container.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <span style="font-weight:bold; color:white;">${sanitizeHTML(item.name)}</span>
+                        <span style="color:#34d399; font-weight:bold;">₩${Number(item.price).toLocaleString()}</span>
+                    </div>`;
+            });
+            totalEl.innerText = `₩${total.toLocaleString()}`;
+        }
+
+        function copyBankInfo() {
+            if (!checkRateLimit()) return;
+            const textToCopy = "토스뱅크 1908-4397-1045";
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast("계좌번호가 복사되었습니다!");
+                }).catch(() => fallbackCopy(textToCopy));
+            } else {
+                fallbackCopy(textToCopy);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast("계좌번호가 복사되었습니다!");
+        }
+
+        function openTossApp() {
+            if (!checkRateLimit()) return;
+            window.location.href = "supertoss://";
+        }
+
+        async function completeTransfer() {
+            if (!checkRateLimit()) return;
+            if (cart.length === 0) return showToast("장바구니가 비어 있습니다.");
+            
+            const buyerNameInput = document.getElementById('buyer-name');
+            const buyerContactInput = document.getElementById('buyer-contact');
+
+            const buyerName = buyerNameInput ? buyerNameInput.value.trim() : '';
+            const buyerContact = buyerContactInput ? buyerContactInput.value.trim() : '';
+
+            if (!buyerName) return showToast("입금자 성함을 입력해 주세요.");
+            if (!buyerContact) return showToast("디스코드 닉네임을 입력해 주세요.");
+
+            let totalAmount = cart.reduce((sum, item) => sum + item.price, 0);
+            let productNames = cart.map(item => item.name).join('\n• ');
+
+            const newOrder = {
+                id: Date.now(),
+                buyerName: buyerName,
+                buyerContact: buyerContact,
+                totalAmount: totalAmount,
+                items: [...cart],
+                timestamp: new Date().toLocaleString()
+            };
+
+            pendingOrders.push(newOrder);
+            try { localStorage.setItem('geonyeong_orders', JSON.stringify(pendingOrders)); } catch(e){}
+
+            if (WEBHOOK_URL && WEBHOOK_URL.includes("discord.com/api/webhooks")) {
+                try {
+                    const payload = {
+                        embeds: [{
+                            title: "💎 [건영허브] 신규 입금 확인 및 수령 요청",
+                            color: 65407,
+                            fields: [
+                                { name: "👤 입금자명", value: `\`\`\`${buyerName}\`\`\``, inline: true },
+                                { name: "🎮 디스코드 닉네임", value: `\`\`\`${buyerContact}\`\`\``, inline: true },
+                                { name: "💰 결제 금액", value: `**₩${totalAmount.toLocaleString()}**`, inline: false },
+                                { name: "📦 주문 상품 목록", value: `• ${productNames}`, inline: false },
+                                { name: "🏦 지정 입금 계좌", value: "토스뱅크 1908-4397-1045 (박건영)", inline: false }
+                            ],
+                            timestamp: new Date().toISOString(),
+                            footer: { text: "GEONYEONG HUB Secure Store" }
+                        }]
+                    };
+
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (err) {
+                    console.error("웹훅 전달 오류:", err);
+                }
+            }
+
+            cart = [];
+            try { localStorage.removeItem('geonyeong_cart'); } catch (e) {}
+            if (buyerNameInput) buyerNameInput.value = '';
+            if (buyerContactInput) buyerContactInput.value = '';
+            updateCartUI();
+            toggleCart();
+
+            document.getElementById('pending-modal').classList.remove('hidden');
+        }
+
+        function closePendingModal() {
+            document.getElementById('pending-modal').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            renderProducts();
+            updateCartUI();
+        };
+    </script>
+</body>
+</html>
